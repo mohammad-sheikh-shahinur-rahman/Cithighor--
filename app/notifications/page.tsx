@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import DashboardHeader from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,43 +14,38 @@ interface Notification {
   message: string
   time: string
   read: boolean
+  userId: number
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      type: "message",
-      title: "নতুন চিঠি",
-      message: "আপনার একটি নতুন চিঠি এসেছে",
-      time: "১০ মিনিট আগে",
-      read: false
-    },
-    {
-      id: 2,
-      type: "system",
-      title: "সিস্টেম আপডেট",
-      message: "আমাদের সিস্টেমে নতুন ফিচার যোগ করা হয়েছে",
-      time: "১ ঘন্টা আগে",
-      read: true
-    },
-    {
-      id: 3,
-      type: "star",
-      title: "তারকাচিহ্নিত",
-      message: "আপনার চিঠিটি তারকাচিহ্নিত করা হয়েছে",
-      time: "২ ঘন্টা আগে",
-      read: true
-    },
-    {
-      id: 4,
-      type: "trash",
-      title: "চিঠি মুছে ফেলা হয়েছে",
-      message: "আপনার একটি চিঠি ট্র্যাশে স্থানান্তরিত করা হয়েছে",
-      time: "১ দিন আগে",
-      read: true
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const router = useRouter()
+
+  useEffect(() => {
+    // Check if user is logged in
+    const currentUser = localStorage.getItem("currentUser")
+    if (!currentUser) {
+      router.push("/login")
+      return
     }
-  ])
+
+    const userData = JSON.parse(currentUser)
+
+    // Load notifications from localStorage
+    const storedNotifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+    const userNotifications = storedNotifications.filter((n: Notification) => n.userId === userData.id)
+    setNotifications(userNotifications)
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      const updatedNotifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+      const userUpdatedNotifications = updatedNotifications.filter((n: Notification) => n.userId === userData.id)
+      setNotifications(userUpdatedNotifications)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [router])
 
   const getNotificationIcon = (type: Notification["type"]) => {
     switch (type) {
@@ -65,18 +61,36 @@ export default function Notifications() {
   }
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({
+    const updatedNotifications = notifications.map(notification => ({
       ...notification,
       read: true
-    })))
+    }))
+    setNotifications(updatedNotifications)
+
+    // Update localStorage
+    const allNotifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+    const updatedAllNotifications = allNotifications.map((n: Notification) => {
+      if (notifications.some(notification => notification.id === n.id)) {
+        return { ...n, read: true }
+      }
+      return n
+    })
+    localStorage.setItem("notifications", JSON.stringify(updatedAllNotifications))
   }
 
   const clearAll = () => {
     setNotifications([])
+
+    // Update localStorage
+    const allNotifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+    const filteredNotifications = allNotifications.filter((n: Notification) => 
+      !notifications.some(notification => notification.id === n.id)
+    )
+    localStorage.setItem("notifications", JSON.stringify(filteredNotifications))
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="flex flex-col min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <DashboardHeader toggleSidebar={() => {}} />
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto">

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,19 @@ export default function AdminDashboard() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Helper to reload users from localStorage
+  const reloadUsers = useCallback(() => {
+    const allUsers = JSON.parse(localStorage.getItem("users") || "[]")
+    setUsers(allUsers)
+    setFilteredUsers(allUsers.filter(
+      (user) =>
+        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.mobile && user.mobile.toLowerCase().includes(searchTerm.toLowerCase())),
+    ))
+  }, [searchTerm])
+
   useEffect(() => {
     // Check if user is logged in and is super admin
     const user = localStorage.getItem("currentUser")
@@ -57,13 +70,20 @@ export default function AdminDashboard() {
     }
 
     setCurrentUser(userData)
-
-    // Load all users
-    const allUsers = JSON.parse(localStorage.getItem("users") || "[]")
-    setUsers(allUsers)
-    setFilteredUsers(allUsers)
+    reloadUsers()
     setLoading(false)
-  }, [router, toast])
+  }, [router, toast, reloadUsers])
+
+  // Add this useEffect to auto-refresh users when localStorage changes (other tabs)
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "users") {
+        reloadUsers()
+      }
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
+  }, [reloadUsers])
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen)
@@ -103,19 +123,8 @@ export default function AdminDashboard() {
 
       // Filter out the deleted user
       const updatedUsers = users.filter((user) => user.id !== userId)
-      setUsers(updatedUsers)
-      setFilteredUsers(
-        updatedUsers.filter(
-          (user) =>
-            user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (user.mobile && user.mobile.toLowerCase().includes(searchTerm.toLowerCase())),
-        ),
-      )
-
-      // Update localStorage
       localStorage.setItem("users", JSON.stringify(updatedUsers))
+      reloadUsers()
 
       // Also delete user's messages
       const messages = JSON.parse(localStorage.getItem("messages") || "[]")
@@ -134,7 +143,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="flex flex-col min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <AdminHeader toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <AdminSidebar isOpen={sidebarOpen} />

@@ -105,7 +105,7 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[url('/paper-texture.png')] p-4">
+    <div className="flex items-center justify-center min-h-screen bg-[url('/images/paper-texture.png')] p-4">
       <Card className="w-full max-w-md border-amber-200 bg-amber-50/90 backdrop-blur-sm">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-serif font-bold text-center text-amber-800">লগইন</CardTitle>

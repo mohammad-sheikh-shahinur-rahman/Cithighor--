@@ -14,7 +14,7 @@ export function TypewriterSound({ isTyping, volume = 0.3 }: TypewriterSoundProps
   useEffect(() => {
     // Create audio element if it doesn't exist
     if (!audioRef.current) {
-      audioRef.current = new Audio("/typewriter-sound.mp3")
+      audioRef.current = new Audio("/sounds/typewriter-sound.mp3")
       audioRef.current.loop = true
       audioRef.current.volume = volume
     }

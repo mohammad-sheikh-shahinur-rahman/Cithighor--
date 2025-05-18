@@ -97,7 +97,7 @@ export default function AdminUserPage({ params }: { params: Promise<{ userId: st
   }
 
   return (
-    <div className="min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <main className="container mx-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
           <motion.div

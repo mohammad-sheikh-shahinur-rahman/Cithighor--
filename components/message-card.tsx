@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { Archive, Mail, MailOpen, Reply, Share2, Star, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,23 @@ import { motion, AnimatePresence } from "framer-motion"
 
 interface Message {
   id: string
-  content: string
+  to: string
+  from: string
+  email: string
+  message: string
   createdAt: string
-  isRead?: boolean
+  paperStyle?: string
+  inkColor?: string
+  fontStyle?: string
+  sealStyle?: string
+  stampStyle?: string
   signature?: string
+  read?: boolean
+  replied?: boolean
+  isPublic?: boolean
+  status?: string
+  type?: string
+  replyText?: string
 }
 
 interface MessageCardProps {
@@ -26,6 +39,17 @@ interface MessageCardProps {
   fontStyle: string
   sealStyle: string
   stampStyle?: string
+  signature?: string
+}
+
+let lastSoundTime = 0;
+
+interface UserType {
+  id: string;
+  username: string;
+  email: string;
+  fullName?: string;
+  mobile?: string;
 }
 
 export default function MessageCard({
@@ -37,42 +61,125 @@ export default function MessageCard({
   fontStyle,
   sealStyle,
   stampStyle = "classic",
+  signature,
 }: MessageCardProps) {
-  const [isOpen, setIsOpen] = useState(message.isRead)
+  const [isOpen, setIsOpen] = useState(false)
   const [isReplying, setIsReplying] = useState(false)
   const [replyText, setReplyText] = useState("")
   const [isStarred, setIsStarred] = useState(false)
+  const [users, setUsers] = useState<UserType[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<UserType[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 
-  // Format the date to show how long ago the message was received
   const timeAgo = formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })
 
-  const handleOpen = () => {
-    if (!isOpen) {
-      // Play paper unfolding sound
-      const audio = new Audio("/paper-unfold.mp3")
-      audio.play().catch((e) => console.error("Audio playback failed:", e))
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-      onRead()
-    }
-    setIsOpen(true)
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    const newAudio = new Audio("/sounds/typewriter-sound.mp3");
+    newAudio.volume = 0.5;
+    audioRef.current = newAudio;
   }
+
+  return () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+}, []);
+
+
+const handleOpen = () => {
+  onRead();
+  setIsOpen(true);
+
+  const audio = audioRef.current;
+  if (audio) {
+    if (!audio.paused) {
+      // Prevent overlapping playback
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    audio.play().catch((error) => {
+      if (error.name !== 'AbortError') {
+        console.error('Audio playback error:', error);
+      }
+    });
+  }
+};
+
 
   const handleReply = () => {
     setIsReplying(!isReplying)
-    if (!isReplying) {
-      setReplyText("")
-    }
+    if (!isReplying) setReplyText("")
   }
 
   const sendReply = () => {
-    // In a real app, this would send the reply
-    alert("এই ফিচারটি শীঘ্রই আসছে!")
-    setIsReplying(false)
-    setReplyText("")
+    if (!replyText.trim()) return;
+    const allMessages = JSON.parse(localStorage.getItem("letters") || "[]");
+    const updatedMessages = allMessages.map((msg: Message) =>
+      msg.id === message.id ? { ...msg, replyText, replied: true } : msg
+    );
+    localStorage.setItem("letters", JSON.stringify(updatedMessages));
+    setIsReplying(false);
+    setReplyText("");
+    message.replyText = replyText;
+    message.replied = true;
+    window.dispatchEvent(new Event("storage"));
   }
 
-  const toggleStar = () => {
-    setIsStarred(!isStarred)
+  const toggleStar = () => setIsStarred(!isStarred);
+
+  const handleUserUpdate = (updatedUser: UserType) => {
+    const users: UserType[] = JSON.parse(localStorage.getItem("users") || "[]");
+    const newUsers = users.map((u: UserType) => u.id === updatedUser.id ? updatedUser : u);
+    localStorage.setItem("users", JSON.stringify(newUsers));
+    setUsers(newUsers);
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const reloadUsers = useCallback(() => {
+    const allUsers: UserType[] = JSON.parse(localStorage.getItem("users") || "[]");
+    setUsers(allUsers);
+    setFilteredUsers(allUsers.filter((user: UserType) =>
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.mobile && user.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
+    ));
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "users") {
+        const allUsers: UserType[] = JSON.parse(localStorage.getItem("users") || "[]")
+        setUsers(allUsers)
+        setFilteredUsers(allUsers.filter((user: UserType) =>
+          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (user.mobile && user.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
+        ))
+      }
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
+  }, [searchTerm])
+
+  const deleteUser = (userId: string) => {
+    const updatedUsers: UserType[] = [];
+    localStorage.setItem("users", JSON.stringify(updatedUsers));
+    setUsers(updatedUsers);
+    setFilteredUsers(updatedUsers.filter((user: UserType) =>
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.mobile && user.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
+    ));
   }
 
   return (
@@ -90,27 +197,27 @@ export default function MessageCard({
       >
         {!isOpen ? (
           <div className="relative">
-            <CardContent className="p-4 flex items-center justify-between">
+            <div className="p-4 flex items-center justify-between">
               <div className="flex items-center">
                 <Mail className="h-5 w-5 mr-2 text-amber-800" />
                 <p className="text-amber-800 font-medium">নতুন চিঠি</p>
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-amber-700">{timeAgo}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={handleOpen}
-                  className="text-amber-800 hover:text-amber-900 hover:bg-amber-100"
+                  className="text-amber-800 hover:text-amber-900 hover:bg-amber-100 cursor-pointer px-4 py-2 rounded-md transition-colors border border-amber-200 bg-white font-bold"
                 >
                   খুলুন
-                </Button>
+                </button>
               </div>
-            </CardContent>
-
+            </div>
             {/* Wax Seal */}
-            <div
-              className={`absolute top-1/2 right-12 transform -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center
+            <button
+              type="button"
+              onClick={handleOpen}
+              className={`absolute top-1/2 right-12 transform -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer border-4 border-white shadow-lg
                 ${
                   sealStyle === "red"
                     ? "bg-red-600"
@@ -122,97 +229,110 @@ export default function MessageCard({
                           ? "bg-green-600"
                           : "bg-purple-600"
                 }`}
+              aria-label="সিল খুলুন"
             >
-              <div className="text-white text-xs font-serif">সিল</div>
-            </div>
-
-            {/* Stamp */}
-            <div className="absolute top-2 right-2 w-16 h-20">
-              <div
-                className={`w-full h-full bg-[url('/stamp-${stampStyle}.png')] bg-contain bg-no-repeat bg-center`}
-              ></div>
-            </div>
+              <span className="text-white text-xs font-serif">সিল</span>
+            </button>
           </div>
         ) : (
           <>
-            <CardContent className={`p-6 min-h-40 bg-[url('/paper-texture-${paperStyle}.png')] bg-repeat relative`}>
-              <div className="flex justify-between items-start mb-4">
-                <MailOpen className="h-5 w-5 text-amber-800" />
-                <p className="text-xs text-amber-700">{timeAgo}</p>
-              </div>
-
-              {/* Stamp in the corner when open */}
-              <div className="absolute top-2 right-2 w-16 h-20 opacity-70">
-                <div
-                  className={`w-full h-full bg-[url('/stamp-${stampStyle}.png')] bg-contain bg-no-repeat bg-center`}
-                ></div>
-              </div>
-
-              <p
-                className={`whitespace-pre-wrap text-${inkColor === "black" ? "amber-900" : inkColor} mt-6`}
+            <CardContent className="p-6 min-h-40 relative">
+              <div 
+                className="absolute inset-0 bg-repeat"
                 style={{
-                  fontFamily:
-                    fontStyle === "handwritten"
-                      ? "cursive, 'Noto Sans Bengali', sans-serif"
-                      : fontStyle === "typewriter"
-                        ? "monospace, 'Noto Sans Bengali', sans-serif"
-                        : fontStyle === "elegant"
-                          ? "serif, 'Noto Sans Bengali', sans-serif"
-                          : fontStyle === "bengali-classic"
-                            ? "'Noto Sans Bengali', sans-serif"
-                            : "'Noto Sans Bengali', sans-serif",
+                  backgroundImage: `url('/images/paper-texture-classic.png')`,
+                  opacity: 0.8
                 }}
-              >
-                {message.content}
-              </p>
+              ></div>
+              <div className="relative z-10 bg-white/80 p-6 rounded-lg shadow-sm">
+                <div className="flex justify-between items-start mb-4">
+                  <MailOpen className="h-5 w-5 text-amber-800" />
+                  <p className="text-xs text-amber-700">{timeAgo}</p>
+                </div>
 
-              {message.signature && (
-                <div className="mt-8 flex justify-end">
+                {/* Stamp in the corner when open */}
+                <div className="absolute top-2 right-2 w-16 h-20 opacity-70">
                   <div
-                    className="max-w-[200px] h-16 opacity-80"
-                    style={{
-                      backgroundImage: `url(${message.signature})`,
-                      backgroundSize: "contain",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center",
-                    }}
+                    className={`w-full h-full bg-[url('/stamp-${stampStyle}.png')] bg-contain bg-no-repeat bg-center`}
                   ></div>
                 </div>
-              )}
 
-              <AnimatePresence>
-                {isReplying && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 space-y-2"
+                <div className="mt-6">
+                  <p
+                    className="whitespace-pre-wrap text-lg leading-relaxed"
+                    style={{
+                      color: inkColor === "black" ? "#78350f" : inkColor,
+                      fontFamily:
+                        fontStyle === "handwritten"
+                          ? "cursive, 'Noto Sans Bengali', sans-serif"
+                          : fontStyle === "typewriter"
+                            ? "monospace, 'Noto Sans Bengali', sans-serif"
+                            : fontStyle === "elegant"
+                              ? "serif, 'Noto Sans Bengali', sans-serif"
+                              : fontStyle === "bengali-classic"
+                                ? "'Noto Sans Bengali', sans-serif"
+                                : "'Noto Sans Bengali', sans-serif",
+                    }}
                   >
-                    <Textarea
-                      placeholder="আপনার উত্তর লিখুন..."
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      className="border-amber-200 bg-amber-50/50 min-h-24"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={sendReply}
-                        className="bg-amber-800 hover:bg-amber-900 text-amber-50"
-                        disabled={!replyText.trim()}
-                      >
-                        পাঠান
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsReplying(false)}
-                        className="border-amber-200 text-amber-800 hover:bg-amber-100"
-                      >
-                        বাতিল
-                      </Button>
+                    {message.message}
+                  </p>
+
+                  {message.signature && (
+                    <div className="mt-8 flex justify-end">
+                      <div
+                        className="max-w-[200px] h-16 opacity-80"
+                        style={{
+                          backgroundImage: `url(${message.signature})`,
+                          backgroundSize: "contain",
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center",
+                        }}
+                      ></div>
                     </div>
-                  </motion.div>
+                  )}
+                </div>
+
+                <AnimatePresence>
+                  {isReplying && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 space-y-2"
+                    >
+                      <Textarea
+                        placeholder="আপনার উত্তর লিখুন..."
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        className="border-amber-200 bg-amber-50/50 min-h-24"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={sendReply}
+                          className="bg-amber-800 hover:bg-amber-900 text-amber-50"
+                          disabled={!replyText.trim()}
+                        >
+                          পাঠান
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsReplying(false)}
+                          className="border-amber-200 text-amber-800 hover:bg-amber-100"
+                        >
+                          বাতিল
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {message.replyText && (
+                  <div className="mt-8 p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
+                    <div className="font-bold text-amber-800 mb-2">আপনার উত্তর:</div>
+                    <div className="text-amber-900 whitespace-pre-wrap">{message.replyText}</div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between p-4 bg-amber-50/90 backdrop-blur-sm border-t border-amber-200">
               <div className="flex gap-2">

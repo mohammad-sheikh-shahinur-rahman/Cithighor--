@@ -65,31 +65,54 @@ export default function UserProfile() {
     setShowAnimation(true)
 
     // Play paper folding sound
-    const audio = new Audio("/paper-fold.mp3")
-    audio.play().catch((e) => console.error("Audio playback failed:", e))
-
-    // Create new message with styling options and signature
-    const newMessage = {
-      id: Date.now().toString(),
-      recipientId: user.id,
-      content: message,
-      createdAt: new Date().toISOString(),
-      paperStyle,
-      inkColor,
-      fontStyle,
-      sealStyle,
-      stampStyle,
-      signature: signatureDataURL,
-      isRead: false,
+    try {
+      const audio = new Audio("/sounds/paper-fold.mp3")
+      audio.volume = 0.5 // Set volume to 50%
+      
+      // Add event listeners for better error handling
+      audio.addEventListener('error', (e) => {
+        console.warn('Audio playback failed:', e)
+      })
+      
+      // Play the sound
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.warn('Audio playback failed:', error)
+        })
+      }
+    } catch (error) {
+      console.warn('Audio initialization failed:', error)
     }
 
     // Delay to show animation
     setTimeout(() => {
       // Get existing messages or initialize empty array
-      const existingMessages = JSON.parse(localStorage.getItem("messages") || "[]")
+      const existingMessages = JSON.parse(localStorage.getItem("letters") || "[]")
+
+      // Create new message with styling options and signature
+      const newMessage = {
+        id: Date.now().toString(),
+        to: user.username,
+        from: "Anonymous",
+        email: "anonymous@example.com",
+        message: message,
+        createdAt: new Date().toISOString(),
+        paperStyle,
+        inkColor,
+        fontStyle,
+        sealStyle,
+        stampStyle,
+        signature: signatureDataURL,
+        read: false,
+        replied: false,
+        isPublic: true,
+        status: "sent",
+        type: "letter"
+      }
 
       // Save to localStorage
-      localStorage.setItem("messages", JSON.stringify([...existingMessages, newMessage]))
+      localStorage.setItem("letters", JSON.stringify([...existingMessages, newMessage]))
 
       toast({
         title: "চিঠি পাঠানো হয়েছে",
@@ -138,7 +161,7 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="flex flex-col min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <header className="px-4 lg:px-6 h-16 flex items-center border-b border-amber-200 bg-amber-50/80 backdrop-blur-sm">
         <Link className="flex items-center justify-center" href="/">
           <span className="font-serif font-bold text-3xl text-amber-800">চিঠিঘর</span>

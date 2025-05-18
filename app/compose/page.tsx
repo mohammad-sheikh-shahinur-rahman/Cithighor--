@@ -93,6 +93,8 @@ export default function ComposePage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  let lastPaperFoldSoundTime = 0;
+
   useEffect(() => {
     // Check if user is logged in
     const currentUser = localStorage.getItem("currentUser")
@@ -138,10 +140,14 @@ export default function ComposePage() {
     setSubmitting(true)
     setShowAnimation(true)
 
-    // Play paper folding sound
+    // Play paper folding sound with debounce
     if (soundEnabled) {
-      const audio = new Audio("/paper-fold.mp3")
-      audio.play().catch((e) => console.error("Audio playback failed:", e))
+      const now = Date.now();
+      if (now - lastPaperFoldSoundTime > 500) { // 500ms debounce
+        lastPaperFoldSoundTime = now;
+        const audio = new Audio("/paper-fold.mp3");
+        audio.play().catch(() => {});
+      }
     }
 
     // Find recipient user
@@ -192,6 +198,20 @@ export default function ComposePage() {
       // Also save to sent messages
       const existingSentMessages = JSON.parse(localStorage.getItem("sentMessages") || "[]")
       localStorage.setItem("sentMessages", JSON.stringify([...existingSentMessages, newMessage]))
+
+      // Create notification for the recipient
+      const notifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+      const newNotification = {
+        id: Date.now(),
+        type: "message",
+        title: "নতুন চিঠি",
+        message: `${user.username} থেকে আপনার কাছে একটি নতুন চিঠি এসেছে`,
+        time: "এইমাত্র",
+        read: false,
+        userId: recipientUser.id
+      }
+      notifications.push(newNotification)
+      localStorage.setItem("notifications", JSON.stringify(notifications))
 
       toast({
         title: "চিঠি পাঠানো হয়েছে",
@@ -258,12 +278,21 @@ export default function ComposePage() {
     setActiveTab("write")
   }
 
+  const handleSignatureSave = (dataURL: string) => {
+    setSignatureDataURL(dataURL)
+    setShowSignaturePad(false)
+    toast({
+      title: "সফল",
+      description: "সিগনেচার সেভ করা হয়েছে।",
+    })
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen bg-amber-50">লোড হচ্ছে...</div>
   }
 
   return (
-    <div className={`flex flex-col min-h-screen bg-[url('/paper-texture-${paperStyle}.png')] bg-repeat`}>
+    <div className="flex flex-col min-h-screen bg-amber-50">
       <DashboardHeader toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <DashboardSidebar isOpen={sidebarOpen} unreadCount={0} totalCount={0} />
@@ -349,10 +378,7 @@ export default function ComposePage() {
                           </div>
 
                               <div
-                                className={`
-                                  min-h-64 p-6 rounded-md border border-amber-200 
-                                  bg-[url('/paper-texture-${paperStyle}.png')] bg-repeat
-                                `}
+                                className="min-h-64 p-6 rounded-md border border-amber-200 bg-amber-50"
                               >
                                 <TypewriterEditor
                                   value={message}
@@ -398,9 +424,28 @@ export default function ComposePage() {
 
                         {showSignaturePad && (
                           <div className="border border-amber-200 rounded-md p-4 bg-amber-50">
-                            <SignatureCanvas onSave={setSignatureDataURL} />
-                                  </div>
-                                )}
+                            <SignatureCanvas onSave={handleSignatureSave} />
+                          </div>
+                        )}
+
+                        {signatureDataURL && !showSignaturePad && (
+                          <div className="mt-4 border border-amber-200 rounded-md p-4 bg-amber-50">
+                            <p className="text-sm text-amber-800 mb-2">আপনার সিগনেচার:</p>
+                            <div
+                              className="h-20 bg-contain bg-no-repeat bg-center"
+                              style={{ backgroundImage: `url(${signatureDataURL})` }}
+                            ></div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowSignaturePad(true)}
+                              className="mt-2 border-amber-200 text-amber-800 hover:bg-amber-100"
+                            >
+                              সিগনেচার পরিবর্তন করুন
+                            </Button>
+                          </div>
+                        )}
                               </div>
                     </form>
                             </TabsContent>
@@ -482,10 +527,7 @@ export default function ComposePage() {
                     <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
                       <h3 className="text-sm font-medium text-amber-800 mb-2">প্রিভিউ</h3>
                       <div
-                        className={`
-                          p-4 rounded-md border border-amber-200 
-                          bg-[url('/paper-texture-${paperStyle}.png')] bg-repeat
-                        `}
+                        className="p-4 rounded-md border border-amber-200 bg-amber-50"
                       >
                         <p
                           className={`

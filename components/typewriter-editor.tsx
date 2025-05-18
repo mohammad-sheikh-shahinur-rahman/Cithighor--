@@ -101,7 +101,7 @@ export function TypewriterEditor({
 
     // Add typewriter carriage return sound for Enter key
     if (e.key === "Enter") {
-      const carriageReturnSound = new Audio("/typewriter-carriage-return.mp3")
+      const carriageReturnSound = new Audio("/sounds/typewriter-carriage-return.mp3")
       carriageReturnSound.volume = 0.4
       carriageReturnSound.play().catch((e) => console.error("Audio playback failed:", e))
     }
@@ -140,8 +140,6 @@ export function TypewriterEditor({
         `}
         style={{
           fontFamily: getFontFamily(),
-          backgroundImage: `url('/paper-texture-${paperStyle}.png')`,
-          backgroundRepeat: "repeat",
         }}
       />
 

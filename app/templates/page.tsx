@@ -105,7 +105,7 @@ export default function Templates() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="flex flex-col min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <DashboardHeader toggleSidebar={() => {}} />
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="max-w-6xl mx-auto">

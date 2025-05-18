@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 
 export default function Developer() {
   return (
-    <div className="flex flex-col min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="flex flex-col min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <header className="px-4 lg:px-6 h-16 flex items-center border-b border-amber-200 bg-amber-50/90 backdrop-blur-sm">
         <Link className="flex items-center justify-center" href="/">
           <span className="font-serif font-bold text-3xl text-amber-800">চিঠিঘর</span>
@@ -198,18 +198,18 @@ export default function Developer() {
                 <div className="flex items-start gap-3">
                   <PenTool className="h-5 w-5 text-amber-800 mt-1" />
                   <p className="text-amber-700">
-                    চিঠিঘর প্রকল্পটি মোহাম্মদ শেখ শাহিনুর রহমানের একটি স্বপ্ন প্রকল্প, যা তিনি ডিজিটাল যুগে পুরোনো দিনের চিঠি লেখার অনুভূতি
-                    ফিরিয়ে আনার লক্ষ্যে তৈরি করেছেন। এই প্রকল্পটি বাংলা ভাষা ও সংস্কৃতিকে সমৃদ্ধ করার পাশাপাশি, ডিজিটাল যোগাযোগের মাধ্যমে মানুষের
-                    মধ্যে আবেগপূর্ণ যোগাযোগের সেতুবন্ধন তৈরি করতে সাহায্য করে।
-                  </p>
+              চিঠিঘর প্রকল্পটি মোহাম্মদ শেখ শাহিনুর রহমানের একটি স্বপ্ন প্রকল্প, যা তিনি ডিজিটাল যুগে পুরোনো দিনের চিঠি লেখার অনুভূতি
+              ফিরিয়ে আনার লক্ষ্যে তৈরি করেছেন। এই প্রকল্পটি বাংলা ভাষা ও সংস্কৃতিকে সমৃদ্ধ করার পাশাপাশি, ডিজিটাল যোগাযোগের মাধ্যমে মানুষের
+              মধ্যে আবেগপূর্ণ যোগাযোগের সেতুবন্ধন তৈরি করতে সাহায্য করে।
+            </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-amber-800 mt-1" />
                   <p className="text-amber-700">
-                    এই প্ল্যাটফর্মে ব্যবহারকারীরা বিভিন্ন ধরনের কাগজ, কালি, ফন্ট, সিল, এবং স্ট্যাম্প ব্যবহার করে তাদের চিঠি কাস্টমাইজ করতে পারেন।
-                    এছাড়াও, চিঠি পাঠানোর সময় খাম ভাঁজ করার এনিমেশন এবং চিঠি পাওয়ার সময় খাম খোলার এনিমেশন ব্যবহারকারীদের একটি অনন্য অভিজ্ঞতা প্রদান
-                    করে।
-                  </p>
+              এই প্ল্যাটফর্মে ব্যবহারকারীরা বিভিন্ন ধরনের কাগজ, কালি, ফন্ট, সিল, এবং স্ট্যাম্প ব্যবহার করে তাদের চিঠি কাস্টমাইজ করতে পারেন।
+              এছাড়াও, চিঠি পাঠানোর সময় খাম ভাঁজ করার এনিমেশন এবং চিঠি পাওয়ার সময় খাম খোলার এনিমেশন ব্যবহারকারীদের একটি অনন্য অভিজ্ঞতা প্রদান
+              করে।
+            </p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -234,10 +234,10 @@ export default function Developer() {
                     </li>
                   </ul>
                 </div>
-                <p className="text-amber-700">
+            <p className="text-amber-700">
                   চিঠিঘর প্রকল্পটি একটি মুক্ত উৎস প্রকল্প, যা ডেভেলপারদের অবদান রাখার সুযোগ প্রদান করে।
-                </p>
-              </div>
+            </p>
+          </div>
             </div>
           </motion.div>
         </div>

@@ -131,7 +131,7 @@ export default function EmailLetter() {
   }
 
   return (
-    <div className="min-h-screen bg-[url('/paper-texture.png')] bg-repeat">
+    <div className="min-h-screen bg-[url('/images/paper-texture.png')] bg-repeat">
       <div className="container mx-auto p-4 md:p-6">
         <div className="max-w-2xl mx-auto">
           <div

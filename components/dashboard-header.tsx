@@ -25,6 +25,7 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({ toggleSidebar }: DashboardHeaderProps) {
   const [user, setUser] = useState<UserData | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const router = useRouter()
   const { theme, setTheme } = useTheme()
 
@@ -32,8 +33,28 @@ export default function DashboardHeader({ toggleSidebar }: DashboardHeaderProps)
     setMounted(true)
     const currentUser = localStorage.getItem("currentUser")
     if (currentUser) {
-      setUser(JSON.parse(currentUser))
+      const userData = JSON.parse(currentUser)
+      setUser(userData)
+
+      // Load unread notifications
+      const notifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+      const userNotifications = notifications.filter((n: any) => n.userId === userData.id && !n.read)
+      setUnreadCount(userNotifications.length)
     }
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      const currentUser = localStorage.getItem("currentUser")
+      if (currentUser) {
+        const userData = JSON.parse(currentUser)
+        const notifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+        const userNotifications = notifications.filter((n: any) => n.userId === userData.id && !n.read)
+        setUnreadCount(userNotifications.length)
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
   }, [])
 
   const handleLogout = () => {
@@ -65,9 +86,14 @@ export default function DashboardHeader({ toggleSidebar }: DashboardHeaderProps)
           <span className="sr-only">Toggle theme</span>
         </Button>
 
-        <Button variant="ghost" size="icon" className="text-amber-800 hover:bg-amber-100" asChild>
+        <Button variant="ghost" size="icon" className="text-amber-800 hover:bg-amber-100 relative" asChild>
           <Link href="/notifications">
             <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
             <span className="sr-only">Notifications</span>
           </Link>
         </Button>

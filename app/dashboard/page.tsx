@@ -30,8 +30,10 @@ interface User {
 
 interface Message {
   id: string
-  recipientId: string
-  content: string
+  to: string
+  from: string
+  email: string
+  message: string
   createdAt: string
   paperStyle?: string
   inkColor?: string
@@ -39,7 +41,11 @@ interface Message {
   sealStyle?: string
   stampStyle?: string
   signature?: string
-  isRead?: boolean
+  read?: boolean
+  replied?: boolean
+  isPublic?: boolean
+  status?: string
+  type?: string
 }
 
 export default function Dashboard() {
@@ -65,8 +71,8 @@ export default function Dashboard() {
     setPaperStyle(userData.preferences?.paperStyle || "classic")
 
     // Load messages for this user
-    const allMessages = JSON.parse(localStorage.getItem("messages") || "[]")
-    const userMessages = allMessages.filter((message: Message) => message.recipientId === userData.id)
+    const allMessages = JSON.parse(localStorage.getItem("letters") || "[]")
+    const userMessages = allMessages.filter((message: Message) => message.to === userData.username)
 
     // Sort messages by date (newest first)
     userMessages.sort((a: Message, b: Message) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -93,9 +99,9 @@ export default function Dashboard() {
     setMessages(updatedMessages)
 
     // Update localStorage
-    const allMessages = JSON.parse(localStorage.getItem("messages") || "[]")
+    const allMessages = JSON.parse(localStorage.getItem("letters") || "[]")
     const filteredMessages = allMessages.filter((message: Message) => message.id !== messageId)
-    localStorage.setItem("messages", JSON.stringify(filteredMessages))
+    localStorage.setItem("letters", JSON.stringify(filteredMessages))
 
     toast({
       title: "চিঠি মুছে ফেলা হয়েছে",
@@ -107,21 +113,30 @@ export default function Dashboard() {
     // Mark message as read
     const updatedMessages = messages.map((message) => {
       if (message.id === messageId) {
-        return { ...message, isRead: true }
+        return { ...message, read: true }
       }
       return message
     })
     setMessages(updatedMessages)
 
     // Update localStorage
-    const allMessages = JSON.parse(localStorage.getItem("messages") || "[]")
+    const allMessages = JSON.parse(localStorage.getItem("letters") || "[]")
     const updatedAllMessages = allMessages.map((message: Message) => {
       if (message.id === messageId) {
-        return { ...message, isRead: true }
+        return { ...message, read: true }
       }
       return message
     })
-    localStorage.setItem("messages", JSON.stringify(updatedAllMessages))
+    localStorage.setItem("letters", JSON.stringify(updatedAllMessages))
+
+    // Update current user's messages
+    if (user) {
+      const updatedUser = {
+        ...user,
+        messages: updatedMessages
+      }
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+    }
   }
 
   const toggleMusic = () => {
@@ -175,14 +190,14 @@ export default function Dashboard() {
     setSidebarOpen(!sidebarOpen)
   }
 
-  const unreadCount = messages.filter((message) => !message.isRead).length
+  const unreadCount = messages.filter((message) => !message.read).length
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen bg-amber-50">লোড হচ্ছে...</div>
   }
 
   return (
-    <div className={`flex flex-col min-h-screen bg-[url('/paper-texture-${paperStyle}.png')] bg-repeat`}>
+    <div className="flex flex-col min-h-screen bg-amber-50">
       <DashboardHeader toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <DashboardSidebar isOpen={sidebarOpen} unreadCount={unreadCount} totalCount={messages.length} />
@@ -249,24 +264,23 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-amber-100 text-amber-800">
-                <TabsTrigger value="all" className="data-[state=active]:bg-amber-800 data-[state=active]:text-amber-50">
-                  সব চিঠি ({messages.length})
+            <Tabs defaultValue="inbox" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="inbox" className="text-amber-800">
+                  ইনবক্স ({unreadCount})
                 </TabsTrigger>
-                <TabsTrigger
-                  value="unread"
-                  className="data-[state=active]:bg-amber-800 data-[state=active]:text-amber-50"
-                >
-                  নতুন চিঠি ({unreadCount})
+                <TabsTrigger value="sent" className="text-amber-800">
+                  পাঠানো ({messages.filter((m) => m.replied).length})
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="all" className="mt-6">
+
+              <TabsContent value="inbox" className="space-y-4">
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 bg-amber-50/80 backdrop-blur-sm rounded-lg border border-amber-200">
-                    <h3 className="text-lg font-serif font-medium text-amber-800">কোনো চিঠি নেই</h3>
-                    <p className="text-sm text-amber-700 mt-2">আপনার লিংক শেয়ার করুন যাতে অন্যরা আপনাকে চিঠি পাঠাতে পারে।</p>
-                  </div>
+                  <Card className="border-amber-200 bg-amber-50/90 backdrop-blur-sm">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-amber-800">কোন চিঠি নেই</p>
+                    </CardContent>
+                  </Card>
                 ) : (
                   <div className="grid gap-4">
                     {messages.map((message) => (
@@ -286,16 +300,18 @@ export default function Dashboard() {
                   </div>
                 )}
               </TabsContent>
-              <TabsContent value="unread" className="mt-6">
-                {unreadCount === 0 ? (
-                  <div className="text-center py-12 bg-amber-50/80 backdrop-blur-sm rounded-lg border border-amber-200">
-                    <h3 className="text-lg font-serif font-medium text-amber-800">কোনো নতুন চিঠি নেই</h3>
-                    <p className="text-sm text-amber-700 mt-2">সব চিঠি পড়া হয়েছে।</p>
-                  </div>
+
+              <TabsContent value="sent" className="space-y-4">
+                {messages.filter((m) => m.replied).length === 0 ? (
+                  <Card className="border-amber-200 bg-amber-50/90 backdrop-blur-sm">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-amber-800">কোন পাঠানো চিঠি নেই</p>
+                    </CardContent>
+                  </Card>
                 ) : (
                   <div className="grid gap-4">
                     {messages
-                      .filter((message) => !message.isRead)
+                      .filter((m) => m.replied)
                       .map((message) => (
                         <MessageCard
                           key={message.id}
